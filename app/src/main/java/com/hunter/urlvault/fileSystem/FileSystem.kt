@@ -134,6 +134,16 @@ class FileSystem(private val db: SQLiteDatabase?) {
         Log.d("pathToFsId()","the fsId of the path $path is $fsId")
         return fsId
     }
+    private fun fsIdToPath(fsId: Int):String{
+        var id = fsId
+        var path = ""
+        while (id!=1){
+            path ="/"+getField(id,FsBlock.fsName) as String +path
+            id = getField(id,FsBlock.fsParent)as Int
+        }
+        path = "root$path"
+        return path
+    }
     private fun createNode(path:String, name:String, type:Int):String{
         Log.d("createNode","path = $path")
         val parentFsId = pathToFsId(path)
@@ -189,6 +199,18 @@ class FileSystem(private val db: SQLiteDatabase?) {
         return if(getField(fsId,FsBlock.fsType) as Int ==0)
             getChildList(fsId)
         else null
+    }
+    fun listNode(path: String):List<Node>{
+        val fsId = pathToFsId(path)
+        val child = getChildList(fsId)
+        val list = mutableListOf<Node>()
+        if (child != null) {
+            for (i in child){
+                list.add(node(i.key))
+            }
+
+        }
+        return list
     }
     private fun getSubDir(fsId: Int):ArrayList<String>{
         val result = ArrayList<String>()
@@ -293,57 +315,46 @@ class FileSystem(private val db: SQLiteDatabase?) {
             "name changed successfully!"
         }
     }
-    data class Dir(
-        val FsId: Int,
-        val FsName: String,
-        val FsType:Int,
-        val FsParent: Int,
-        val FsChild:Map<Int,String>?
-    )
-    data class File(
-        val FsId: Int,
-        val FsName: String,
-        val FsType:Int,
-        val FsParent: Int,
-        val data:String?
-    )
-    fun dir(fsId:Int):Dir{
-        return Dir(
+    private fun node(fsId: Int):Node{
+        return if (getField(fsId,FsBlock.fsType) as Int ==0) Dir(
             fsId,
             getField(fsId,FsBlock.fsName) as String,
             getField(fsId,FsBlock.fsType) as Int,
             getField(fsId,FsBlock.fsParent) as Int,
+            fsIdToPath(fsId),
             getChildList(fsId)
         )
-    }
-    fun file(fsId: Int):File{
-        return File(
+        else File(
             fsId,
             getField(fsId,FsBlock.fsName) as String,
             getField(fsId,FsBlock.fsType) as Int,
             getField(fsId,FsBlock.fsParent) as Int,
+            fsIdToPath(fsId),
             getData(fsId)
         )
     }
-    fun dir(path: String):Dir{
-        val fsId = pathToFsId(path)
-        return Dir(
-            fsId,
-            getField(fsId,FsBlock.fsName) as String,
-            getField(fsId,FsBlock.fsType) as Int,
-            getField(fsId,FsBlock.fsParent) as Int,
-            getChildList(fsId)
-        )
+    interface Node{
+        val fsId: Int
+        val fsName: String
+        val fsType:Int
+        val fsParent: Int
+        val path:String
     }
-    fun file(path: String):File{
-        val fsId = pathToFsId(path)
-        return File(
-            fsId,
-            getField(fsId,FsBlock.fsName) as String,
-            getField(fsId,FsBlock.fsType) as Int,
-            getField(fsId,FsBlock.fsParent) as Int,
-            getData(fsId)
-        )
-    }
+    data class Dir (
+        override val fsId: Int,
+        override val fsName: String,
+        override val fsType: Int,
+        override val fsParent: Int,
+        override val path: String,
+        val FsChild:Map<Int,String>?,
+    ):Node
 
+    data class File(
+        override val fsId: Int,
+        override val fsName: String,
+        override val fsType: Int,
+        override val fsParent: Int,
+        override val path: String,
+        val data:String?
+    ):Node
 }
