@@ -315,6 +315,9 @@ class FileSystem(private val db: SQLiteDatabase?) {
             "name changed successfully!"
         }
     }
+    fun parentPath(selectedDir:String):String{
+        return fsIdToPath(getField(pathToFsId(selectedDir),FsBlock.fsParent) as Int)
+    }
     private fun node(fsId: Int):Node{
         return if (getField(fsId,FsBlock.fsType) as Int ==0) Dir(
             fsId,
