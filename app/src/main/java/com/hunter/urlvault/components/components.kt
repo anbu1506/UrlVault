@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -111,10 +112,15 @@ fun HomeScreen(fs: FileSystem){
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 setCreateDirVisible=true
-
-
             }) {
                 Icon(Icons.Default.Add,"add")
+                CreateDir(setCreateDirVisible,cancel = {setCreateDirVisible=false},
+                    save ={name: String ->
+                        val res=fs.createDir(selectedDir,name)
+                        Log.d("GUI-create", res)
+                        Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                        list = fs.listNode(selectedDir)
+                    } )
             }
         }
     ) {paddingValues ->
@@ -153,9 +159,13 @@ fun HomeScreen(fs: FileSystem){
                                     text = item.fsName,
                                     modifier = Modifier
                                         .height(48.dp)
-                                        .padding(15.dp),
+                                        .padding(10.dp),
                                     color = MaterialTheme.colorScheme.onBackground,
-                                )
+                                    style = TextStyle(
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Thin
+                                ))
                                 Spacer(modifier = Modifier.weight(1f))
                                 var mDisplayMenu by remember { mutableStateOf(false) }
                                 IconButton(
@@ -174,6 +184,7 @@ fun HomeScreen(fs: FileSystem){
                                         onClick = {
                                             val res = fs.deleteNode(item.path)
                                             Log.d("GUI-delete", res)
+                                            Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
                                             list = fs.listNode(selectedDir)
                                         },
                                         leadingIcon = {
@@ -182,18 +193,35 @@ fun HomeScreen(fs: FileSystem){
                                                 contentDescription = null
                                             )
                                         })
+                                    var isVisible by remember { mutableStateOf(false) }
+                                    DropdownMenuItem(
+                                        text = { Text("rename") },
+                                        onClick = {
+                                            isVisible = true
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Outlined.Edit,
+                                                contentDescription = null
+                                            )
+                                            RenameDialogue(
+                                                isVisible = isVisible,
+                                                cancel = { isVisible=false},
+                                                save ={name: String ->
+                                                    val res=fs.rename(item.path,name)
+                                                    Log.d("GUI-rename", res)
+                                                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                                                    list = fs.listNode(selectedDir)
+                                                    isVisible=false
+                                                }
+                                            )
+                                        })
                                 }
                             }
 
                         }
                     }
                 }
-                CreateDir(setCreateDirVisible,cancel = {setCreateDirVisible=false},
-                    save ={name: String ->
-                    val res=fs.createDir(selectedDir,name)
-                        Toast.makeText(context,res,Toast.LENGTH_SHORT)
-                    list = fs.listNode(selectedDir)
-                } )
             }
         }
     }
@@ -262,7 +290,6 @@ fun CreateDir(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit){
     if (isVisible){
         AlertDialog(
             shape = RectangleShape,
-            containerColor = Color.White,
             onDismissRequest = {
                 cancel()
             },
@@ -286,9 +313,9 @@ fun CreateDir(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit){
             confirmButton = {
                 TextButton(
                     onClick = {
-                        if(editedName=="") editedName="New Dir"
+                        if(editedName!=""){
                         save(editedName)
-                        cancel()
+                        cancel()}
                     }
                 ) {
                     Text(text = "Ok")
@@ -305,7 +332,44 @@ fun CreateDir(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit){
             }
         )
     }
+}
 
-
-
+@Composable
+fun RenameDialogue(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit) {
+    var editedName by remember { mutableStateOf("New Dir") }
+    if (isVisible) {
+        AlertDialog(
+            onDismissRequest = {
+                cancel()
+            },
+            title = { Text(text = "Rename") },
+            text = {
+                OutlinedTextField(
+                    value = editedName,
+                    onValueChange = { editedName = it },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if(editedName!=""){
+                            save(editedName)
+                            cancel()}
+                    }
+                ) {
+                    Text(text = "Save")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        cancel()
+                    }
+                ) {
+                    Text(text = "Cancel")
+                }
+            }
+        )
+    }
 }
