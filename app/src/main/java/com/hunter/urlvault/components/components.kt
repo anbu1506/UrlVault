@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,10 +17,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Delete
@@ -79,6 +80,9 @@ fun HomeScreen(fs: FileSystem){
     var setCreateDirVisible by remember {
         mutableStateOf(false)
     }
+    var setCreateFileVisible by remember {
+        mutableStateOf(false)
+    }
     val systemUiController = rememberSystemUiController()
     SideEffect {
         systemUiController.setStatusBarColor(Color.Black)
@@ -110,17 +114,46 @@ fun HomeScreen(fs: FileSystem){
         },
         floatingActionButtonPosition = FabPosition.End,
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                setCreateDirVisible=true
-            }) {
-                Icon(Icons.Default.Add,"add")
-                CreateDir(setCreateDirVisible,cancel = {setCreateDirVisible=false},
-                    save ={name: String ->
-                        val res=fs.createDir(selectedDir,name)
-                        Log.d("GUI-create", res)
-                        Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
-                        list = fs.listNode(selectedDir)
-                    } )
+            Column{
+                FloatingActionButton(onClick = {
+                    setCreateDirVisible=true
+                }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.add_folder),
+                        contentDescription = null,
+                        modifier = Modifier.size(25.dp,25.dp)
+                    )
+                    CreateDir(setCreateDirVisible,cancel = {setCreateDirVisible=false},
+                        save ={name: String ->
+                            val res=fs.createDir(selectedDir,name)
+                            Log.d("GUI-create", res)
+                            Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                            list = fs.listNode(selectedDir)
+                        } )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                FloatingActionButton(
+                    onClick = {
+                        setCreateFileVisible=true
+                    },
+                    content = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.url),
+                            contentDescription = null,
+                            modifier = Modifier.size(25.dp,25.dp)
+                        )
+                        CreateFile(isVisible = setCreateFileVisible,
+                            cancel = { setCreateFileVisible=false},
+                            save ={name: String,url:String->
+                                val res=fs.createFile(selectedDir,name)
+                                fs.writeFile("$selectedDir/$name",url)
+                                Log.d("GUI-create", res)
+                                Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                                list = fs.listNode(selectedDir)
+                                setCreateFileVisible=false
+                            } )
+                    }
+                )
             }
         }
     ) {paddingValues ->
@@ -133,24 +166,43 @@ fun HomeScreen(fs: FileSystem){
             Column {
                 LazyColumn {
                     items(list) { item ->
-                        ListDir(
-                            item = item,
-                            nodeClick = {path:String->
-                                        selectedDir = path
-                                        list = fs.listNode(selectedDir)
-                            },
-                            delete = { path:String ->
-                                val res = fs.deleteNode(path)
-                                Log.d("GUI-delete", res)
-                                Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
-                                list = fs.listNode(selectedDir)
-                            }, rename ={ path:String,name:String ->
-                                val res=fs.rename(path,name)
-                                Log.d("GUI-rename", res)
-                                Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
-                                list = fs.listNode(selectedDir)
-                            }
-                        )
+                        if (item.fsType == 0){
+                            Dir(
+                                item = item as FileSystem.Dir,
+                                nodeClick = {path:String->
+                                    selectedDir = path
+                                    list = fs.listNode(selectedDir)
+                                },
+                                delete = { path:String ->
+                                    val res = fs.deleteNode(path)
+                                    Log.d("GUI-delete", res)
+                                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                                    list = fs.listNode(selectedDir)
+                                }, rename ={ path:String,name:String ->
+                                    val res=fs.rename(path,name)
+                                    Log.d("GUI-rename", res)
+                                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                                    list = fs.listNode(selectedDir)
+                                }
+                            )
+                        }
+                        else{
+                            File(
+                                item = item as FileSystem.File,
+                                delete ={path: String ->
+                                    val res = fs.deleteNode(path)
+                                    Log.d("GUI-delete", res)
+                                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                                    list = fs.listNode(selectedDir)
+                                } ,
+                                rename ={path: String, name: String ->
+                                    val res=fs.rename(path,name)
+                                    Log.d("GUI-rename", res)
+                                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                                    list = fs.listNode(selectedDir)
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -216,7 +268,7 @@ fun exitApp() {
 }
 
 @Composable
-fun ListDir(item:FileSystem.Node,nodeClick:(path:String)->Unit,delete:(path:String)->Unit,rename:(path:String,name:String)->Unit){
+fun Dir(item:FileSystem.Dir,nodeClick:(path:String)->Unit,delete:(path:String)->Unit,rename:(path:String,name:String)->Unit){
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -234,7 +286,7 @@ fun ListDir(item:FileSystem.Node,nodeClick:(path:String)->Unit,delete:(path:Stri
                 .height(50.dp)
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.dir_icon),
+                painter = painterResource(id = R.drawable.folder),
                 contentDescription = null
             )
             Text(
@@ -297,7 +349,119 @@ fun ListDir(item:FileSystem.Node,nodeClick:(path:String)->Unit,delete:(path:Stri
 
     }
 }
+@Composable
+fun File(item:FileSystem.File,delete:(path:String)->Unit,rename:(path:String,name:String)->Unit){
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(15.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
 
+        ) {
+        Column{
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .clickable {
+
+                    }
+                    .background(Color.LightGray)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.web_link),
+                    contentDescription = "web-url-image",
+                    modifier = Modifier
+                        .size(100.dp, 100.dp)
+                        .padding(8.dp)
+                )
+                item.data?.let {
+                    Text(
+                        text = it,
+                        modifier = Modifier
+                            .height(100.dp)
+                            .padding(25.dp),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Thin
+                        ),
+                        maxLines = 2,
+                    )
+                }
+            }
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+//                Icon(
+//                    painter = painterResource(id = R.drawable.url),
+//                    contentDescription = null
+//                )
+                Text(
+                    text = item.fsName,
+                    modifier = Modifier
+                        .height(48.dp)
+                        .padding(14.dp),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Thin
+                    ))
+                Spacer(modifier = Modifier.weight(1f))
+                var mDisplayMenu by remember { mutableStateOf(false) }
+                IconButton(
+                    onClick = { mDisplayMenu = !mDisplayMenu },
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Icon(Icons.Default.MoreVert, "more")
+                }
+                DropdownMenu(
+                    expanded = mDisplayMenu,
+                    onDismissRequest = { mDisplayMenu = false },
+                    offset = DpOffset((-40).dp, 0.dp)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("delete") },
+                        onClick = {
+                            delete(item.path)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Outlined.Delete,
+                                contentDescription = null
+                            )
+                        })
+
+                    var isVisible by remember { mutableStateOf(false) }
+                    DropdownMenuItem(
+                        text = { Text("rename") },
+                        onClick = { isVisible = true },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Outlined.Edit,
+                                contentDescription = null
+                            )
+                            RenameDialogue(
+                                isVisible = isVisible,
+                                cancel = { isVisible=false},
+                                save ={name: String ->
+                                    rename(item.path,name)
+                                    isVisible=false
+                                }
+                            )
+                        })
+                }
+            }
+
+        }
+    }
+}
 @Composable
 fun CreateDir(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit){
     var editedName by remember { mutableStateOf("New Dir") }
@@ -347,7 +511,66 @@ fun CreateDir(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit){
         )
     }
 }
-
+@Composable
+fun CreateFile(isVisible: Boolean,cancel:()->Unit,save:(name:String,url:String)->Unit){
+    var editedName by remember { mutableStateOf("New File") }
+    var editedUrl by remember { mutableStateOf("https://") }
+    if (isVisible){
+    AlertDialog(
+        onDismissRequest = {
+            cancel()
+        },
+        title = { Text(text = "New Url",modifier = Modifier.padding(0.dp),style = TextStyle(
+            fontFamily = FontFamily.Monospace,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
+        )) },
+        text = { Column {
+            Text(text = "Name:",modifier = Modifier.padding(5.dp),style = TextStyle(
+                fontFamily = FontFamily.Monospace,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Thin
+            ))
+            OutlinedTextField(
+                value = editedName,
+                onValueChange = { editedName = it },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(text = "Url:",modifier = Modifier.padding(5.dp),style = TextStyle(
+                fontFamily = FontFamily.Monospace,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Thin
+            ))
+            OutlinedTextField(
+                value = editedUrl,
+                onValueChange = { editedUrl = it },
+                modifier = Modifier.fillMaxWidth()
+            )
+        } },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if(editedName!=""&&editedUrl!=""){
+                        save(editedName,editedUrl)
+                        cancel()
+                    }
+                }
+            ) {
+                Text(text = "Save")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    cancel()
+                }
+            ) {
+                Text(text = "Cancel")
+            }
+        }
+    )
+    }
+}
 @Composable
 fun RenameDialogue(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit) {
     var editedName by remember { mutableStateOf("New Dir") }
