@@ -131,102 +131,32 @@ fun HomeScreen(fs: FileSystem){
                 .padding(paddingValues)
         ) {
             Column {
-
                 LazyColumn {
                     items(list) { item ->
-                        ElevatedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(5.dp)
-                                .clickable {
-                                    selectedDir = item.path
-                                    list = fs.listNode(selectedDir)
-                                },
-                            elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
-
-                            ) {
-                            Row(
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(50.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.dir_icon),
-                                    contentDescription = null
-                                )
-                                Text(
-                                    text = item.fsName,
-                                    modifier = Modifier
-                                        .height(48.dp)
-                                        .padding(10.dp),
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                    style = TextStyle(
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Thin
-                                ))
-                                Spacer(modifier = Modifier.weight(1f))
-                                var mDisplayMenu by remember { mutableStateOf(false) }
-                                IconButton(
-                                    onClick = { mDisplayMenu = !mDisplayMenu },
-                                    modifier = Modifier.padding(8.dp)
-                                ) {
-                                    Icon(Icons.Default.MoreVert, "")
-                                }
-                                DropdownMenu(
-                                    expanded = mDisplayMenu,
-                                    onDismissRequest = { mDisplayMenu = false },
-                                    offset = DpOffset((-40).dp, 0.dp)
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("delete") },
-                                        onClick = {
-                                            val res = fs.deleteNode(item.path)
-                                            Log.d("GUI-delete", res)
-                                            Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
-                                            list = fs.listNode(selectedDir)
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                Icons.Outlined.Delete,
-                                                contentDescription = null
-                                            )
-                                        })
-                                    var isVisible by remember { mutableStateOf(false) }
-                                    DropdownMenuItem(
-                                        text = { Text("rename") },
-                                        onClick = {
-                                            isVisible = true
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                Icons.Outlined.Edit,
-                                                contentDescription = null
-                                            )
-                                            RenameDialogue(
-                                                isVisible = isVisible,
-                                                cancel = { isVisible=false},
-                                                save ={name: String ->
-                                                    val res=fs.rename(item.path,name)
-                                                    Log.d("GUI-rename", res)
-                                                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
-                                                    list = fs.listNode(selectedDir)
-                                                    isVisible=false
-                                                }
-                                            )
-                                        })
-                                }
+                        ListDir(
+                            item = item,
+                            nodeClick = {path:String->
+                                        selectedDir = path
+                                        list = fs.listNode(selectedDir)
+                            },
+                            delete = { path:String ->
+                                val res = fs.deleteNode(path)
+                                Log.d("GUI-delete", res)
+                                Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                                list = fs.listNode(selectedDir)
+                            }, rename ={ path:String,name:String ->
+                                val res=fs.rename(path,name)
+                                Log.d("GUI-rename", res)
+                                Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                                list = fs.listNode(selectedDir)
                             }
-
-                        }
+                        )
                     }
                 }
             }
         }
     }
 }
-
 
 
 
@@ -284,6 +214,90 @@ fun exitApp() {
     val handler = Handler(Looper.getMainLooper())
     handler.postDelayed({ exitProcess(0) }, 200)
 }
+
+@Composable
+fun ListDir(item:FileSystem.Node,nodeClick:(path:String)->Unit,delete:(path:String)->Unit,rename:(path:String,name:String)->Unit){
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(5.dp)
+            .clickable {
+                nodeClick(item.path)
+            },
+        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
+
+        ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.dir_icon),
+                contentDescription = null
+            )
+            Text(
+                text = item.fsName,
+                modifier = Modifier
+                    .height(48.dp)
+                    .padding(14.dp),
+                color = MaterialTheme.colorScheme.onBackground,
+                style = TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Thin
+                ))
+            Spacer(modifier = Modifier.weight(1f))
+            var mDisplayMenu by remember { mutableStateOf(false) }
+            IconButton(
+                onClick = { mDisplayMenu = !mDisplayMenu },
+                modifier = Modifier.padding(8.dp)
+            ) {
+                Icon(Icons.Default.MoreVert, "")
+            }
+            DropdownMenu(
+                expanded = mDisplayMenu,
+                onDismissRequest = { mDisplayMenu = false },
+                offset = DpOffset((-40).dp, 0.dp)
+            ) {
+                DropdownMenuItem(
+                    text = { Text("delete") },
+                    onClick = {
+                        delete(item.path)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.Delete,
+                            contentDescription = null
+                        )
+                    })
+                var isVisible by remember { mutableStateOf(false) }
+                DropdownMenuItem(
+                    text = { Text("rename") },
+                    onClick = {
+                        isVisible = true
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.Edit,
+                            contentDescription = null
+                        )
+                        RenameDialogue(
+                            isVisible = isVisible,
+                            cancel = { isVisible=false},
+                            save ={name: String ->
+                                rename(item.path,name)
+                                isVisible=false
+                            }
+                        )
+                    })
+            }
+        }
+
+    }
+}
+
 @Composable
 fun CreateDir(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit){
     var editedName by remember { mutableStateOf("New Dir") }

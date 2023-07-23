@@ -26,18 +26,6 @@ private const val FsBlockEntries = "create table FsBlock(" +
         "${FsBlock.fsChild}    text)"
 
 private  const val FsBlock_DELETE_ENTRIES = "DROP TABLE IF EXISTS FsBlock"
-/*
-        Table Schema for DataBlock
- */
-//object DataBlock {
-//    const val Did = "Did"
-//    const val Data = "Data"
-//}
-//private const val DataBlockEntries = "create table DataBlock("+
-//        "${DataBlock.Did} integer primary key autoincrement,"+
-//        "${DataBlock.Data} text )"
-//
-//private  const val DataBlock_DELETE_ENTRIES = "DROP TABLE IF EXISTS DataBlock"
 
 /*
         FileSystem class for initializing database and File Management
