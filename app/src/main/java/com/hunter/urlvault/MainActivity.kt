@@ -23,8 +23,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val db = Database(this).writableDatabase
         val fs = FileSystem(db)
-        fs.createFile("root","file-system-repo")
-        fs.writeFile("root/file-system-repo","https://www.github.com/anbu1506/FileSystem")
         setContent {
             UrlVaultTheme {
                 val systemUiController = rememberSystemUiController()

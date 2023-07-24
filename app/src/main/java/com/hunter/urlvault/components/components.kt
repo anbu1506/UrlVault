@@ -1,12 +1,12 @@
 package com.hunter.urlvault.components
 
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
@@ -45,6 +46,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,7 +54,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -61,9 +62,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.rememberImagePainter
+import com.fresh.materiallinkpreview.models.OpenGraphMetaData
+import com.fresh.materiallinkpreview.parsing.OpenGraphMetaDataProvider
+import com.fresh.materiallinkpreview.ui.CardLinkPreview
+import com.fresh.materiallinkpreview.ui.CardLinkPreviewProperties
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.hunter.urlvault.R
 import com.hunter.urlvault.fileSystem.FileSystem
+import java.net.URL
 import kotlin.system.exitProcess
 
 
@@ -351,57 +358,15 @@ fun Dir(item:FileSystem.Dir,nodeClick:(path:String)->Unit,delete:(path:String)->
 }
 @Composable
 fun File(item:FileSystem.File,delete:(path:String)->Unit,rename:(path:String,name:String)->Unit){
-    ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(15.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
-
-        ) {
-        Column{
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
-                    .clickable {
-
-                    }
-                    .background(Color.LightGray)
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.web_link),
-                    contentDescription = "web-url-image",
-                    modifier = Modifier
-                        .size(100.dp, 100.dp)
-                        .padding(8.dp)
-                )
-                item.data?.let {
-                    Text(
-                        text = it,
-                        modifier = Modifier
-                            .height(100.dp)
-                            .padding(25.dp),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        style = TextStyle(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Thin
-                        ),
-                        maxLines = 2,
-                    )
-                }
-            }
+        Column(
+            modifier = Modifier.padding(25.dp)
+        ){
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
             ) {
-//                Icon(
-//                    painter = painterResource(id = R.drawable.url),
-//                    contentDescription = null
-//                )
                 Text(
                     text = item.fsName,
                     modifier = Modifier
@@ -411,8 +376,25 @@ fun File(item:FileSystem.File,delete:(path:String)->Unit,rename:(path:String,nam
                     style = TextStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.Thin
+                        fontWeight = FontWeight.Bold
                     ))
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, item.data)
+                }
+
+                Row {
+                    val context =LocalContext.current
+                    IconButton(
+                        onClick = {
+                            // Start the activity for the share intent
+                            val intentChooser = Intent.createChooser(shareIntent, "Share URL")
+                            context.startActivity(intentChooser)
+                        }
+                    ) {
+                        Icon(Icons.Default.Share,"share")
+                    }
+                }
                 Spacer(modifier = Modifier.weight(1f))
                 var mDisplayMenu by remember { mutableStateOf(false) }
                 IconButton(
@@ -458,16 +440,31 @@ fun File(item:FileSystem.File,delete:(path:String)->Unit,rename:(path:String,nam
                         })
                 }
             }
-
+            var metaData:OpenGraphMetaData? by remember {
+                mutableStateOf(OpenGraphMetaData(title = item.fsName, url = item.data!!))
+            }
+            LaunchedEffect(Unit){
+                metaData = getMetaData(item.data!!,item.fsName)
+            }
+            if (metaData?.imageUrl?.isNotEmpty()==true) {
+                metaData?.let {
+                    CardLinkPreview(
+                        it, CardLinkPreviewProperties.Builder(
+                            imagePainter = rememberImagePainter(metaData!!.imageUrl)
+                        ).build()
+                    )
+                }
+            } else {
+                metaData?.let { CardLinkPreview(it) }
+            }
+            Log.d("previewCard","$metaData")
         }
-    }
 }
 @Composable
 fun CreateDir(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit){
     var editedName by remember { mutableStateOf("New Dir") }
     if (isVisible){
         AlertDialog(
-            shape = RectangleShape,
             onDismissRequest = {
                 cancel()
             },
@@ -609,4 +606,8 @@ fun RenameDialogue(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit) {
             }
         )
     }
+}
+
+suspend fun getMetaData(url:String,name:String):OpenGraphMetaData{
+    return OpenGraphMetaDataProvider().startFetchingMetadataAsync(URL(url)).getOrDefault(OpenGraphMetaData(url =url, title = name))
 }
