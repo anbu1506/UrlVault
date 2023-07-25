@@ -47,7 +47,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,7 +66,6 @@ import com.fresh.materiallinkpreview.models.OpenGraphMetaData
 import com.fresh.materiallinkpreview.parsing.OpenGraphMetaDataProvider
 import com.fresh.materiallinkpreview.ui.CardLinkPreview
 import com.fresh.materiallinkpreview.ui.CardLinkPreviewProperties
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.hunter.urlvault.R
 import com.hunter.urlvault.fileSystem.FileSystem
 import java.net.URL
@@ -76,7 +74,7 @@ import kotlin.system.exitProcess
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(fs: FileSystem){
+fun HomeScreen(fs: FileSystem,intentUrl:String?){
     val context = LocalContext.current
     var selectedDir by remember {
         mutableStateOf("root")
@@ -89,10 +87,6 @@ fun HomeScreen(fs: FileSystem){
     }
     var setCreateFileVisible by remember {
         mutableStateOf(false)
-    }
-    val systemUiController = rememberSystemUiController()
-    SideEffect {
-        systemUiController.setStatusBarColor(Color.Black)
     }
     Scaffold(
         topBar = {
@@ -158,7 +152,9 @@ fun HomeScreen(fs: FileSystem){
                                 Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
                                 list = fs.listNode(selectedDir)
                                 setCreateFileVisible=false
-                            } )
+                            },
+                            intentUrl
+                            )
                     }
                 )
             }
@@ -348,7 +344,8 @@ fun Dir(item:FileSystem.Dir,nodeClick:(path:String)->Unit,delete:(path:String)->
                             save ={name: String ->
                                 rename(item.path,name)
                                 isVisible=false
-                            }
+                            },
+                            item.fsName
                         )
                     })
             }
@@ -435,7 +432,8 @@ fun File(item:FileSystem.File,delete:(path:String)->Unit,rename:(path:String,nam
                                 save ={name: String ->
                                     rename(item.path,name)
                                     isVisible=false
-                                }
+                                },
+                                item.fsName
                             )
                         })
                 }
@@ -509,9 +507,12 @@ fun CreateDir(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit){
     }
 }
 @Composable
-fun CreateFile(isVisible: Boolean,cancel:()->Unit,save:(name:String,url:String)->Unit){
+fun CreateFile(isVisible: Boolean,cancel:()->Unit,save:(name:String,url:String)->Unit,intentUrl: String?){
     var editedName by remember { mutableStateOf("New File") }
     var editedUrl by remember { mutableStateOf("https://") }
+    if (intentUrl!=null){
+        editedUrl=intentUrl
+    }
     if (isVisible){
     AlertDialog(
         onDismissRequest = {
@@ -569,8 +570,8 @@ fun CreateFile(isVisible: Boolean,cancel:()->Unit,save:(name:String,url:String)-
     }
 }
 @Composable
-fun RenameDialogue(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit) {
-    var editedName by remember { mutableStateOf("New Dir") }
+fun RenameDialogue(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit,name:String) {
+    var editedName by remember { mutableStateOf(name) }
     if (isVisible) {
         AlertDialog(
             onDismissRequest = {
@@ -607,7 +608,6 @@ fun RenameDialogue(isVisible:Boolean,cancel:()->Unit,save:(name:String)->Unit) {
         )
     }
 }
-
 suspend fun getMetaData(url:String,name:String):OpenGraphMetaData{
-    return OpenGraphMetaDataProvider().startFetchingMetadataAsync(URL(url)).getOrDefault(OpenGraphMetaData(url =url, title = name))
+    return OpenGraphMetaDataProvider().startFetchingMetadataAsync(URL(url)).getOrDefault(OpenGraphMetaData(title = name,url =url))
 }

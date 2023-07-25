@@ -316,7 +316,8 @@ class FileSystem(private val db: SQLiteDatabase?) {
         }
     }
     fun parentPath(selectedDir:String):String{
-        return fsIdToPath(getField(pathToFsId(selectedDir),FsBlock.fsParent) as Int)
+//        return fsIdToPath(getField(pathToFsId(selectedDir),FsBlock.fsParent) as Int)
+         return selectedDir.substringBeforeLast("/")
     }
     private fun node(fsId: Int):Node{
         return if (getField(fsId,FsBlock.fsType) as Int ==0) Dir(
