@@ -52,6 +52,8 @@ android {
 dependencies {
 
     implementation platform('androidx.compose:compose-bom:2022.10.00')
+    implementation platform('androidx.compose:compose-bom:2022.10.00')
+    androidTestImplementation platform('androidx.compose:compose-bom:2022.10.00')
     androidTestImplementation platform('androidx.compose:compose-bom:2022.10.00')
     def coil_version = "1.4.0"
     implementation("io.coil-kt:coil:$coil_version")

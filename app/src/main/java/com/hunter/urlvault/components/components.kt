@@ -10,7 +10,9 @@ import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -39,6 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,27 +54,32 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.isContainer
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil.compose.rememberImagePainter
 import com.fresh.materiallinkpreview.models.OpenGraphMetaData
 import com.fresh.materiallinkpreview.parsing.OpenGraphMetaDataProvider
 import com.fresh.materiallinkpreview.ui.CardLinkPreview
 import com.fresh.materiallinkpreview.ui.CardLinkPreviewProperties
 import com.hunter.urlvault.R
+import com.hunter.urlvault.SearchActivity
 import com.hunter.urlvault.fileSystem.FileSystem
 import java.net.URL
 import kotlin.system.exitProcess
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,16 +97,31 @@ fun HomeScreen(fs: FileSystem,intentUrl:String?){
     var setCreateFileVisible by remember {
         mutableStateOf(false)
     }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(text=selectedDir, color = Color.White, modifier = Modifier.padding(10.dp),style = TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Thin
-                    )
-                    )
+                    Row {
+                        Text(
+                            text = selectedDir,
+                            color = Color.White,
+                            modifier = Modifier.padding(10.dp),
+                            style = TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Thin
+                            )
+                        )
+                        IconButton(onClick = {
+                            val intent = Intent(context, SearchActivity::class.java)
+                            intent.putExtra("selectedDir", selectedDir)
+                            context.startActivity(intent)
+                        }) {
+                            Icon(Icons.Default.Search, contentDescription = null, tint = Color.White)
+                        }
+                    }
+
                 },
                 modifier = Modifier.height(55.dp),
                 colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color.Black),
@@ -167,6 +191,19 @@ fun HomeScreen(fs: FileSystem,intentUrl:String?){
                 .padding(paddingValues)
         ) {
             Column {
+                val delete = { path:String ->
+                    val res = fs.deleteNode(path)
+                    Log.d("GUI-delete", res)
+                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                    list = fs.listNode(selectedDir)
+                }
+                val rename = { path:String,name:String ->
+                    val res=fs.rename(path,name)
+                    Log.d("GUI-rename", res)
+                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
+                    list = fs.listNode(selectedDir)
+                }
+
                 LazyColumn {
                     items(list) { item ->
                         if (item.fsType == 0){
@@ -176,34 +213,15 @@ fun HomeScreen(fs: FileSystem,intentUrl:String?){
                                     selectedDir = path
                                     list = fs.listNode(selectedDir)
                                 },
-                                delete = { path:String ->
-                                    val res = fs.deleteNode(path)
-                                    Log.d("GUI-delete", res)
-                                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
-                                    list = fs.listNode(selectedDir)
-                                }, rename ={ path:String,name:String ->
-                                    val res=fs.rename(path,name)
-                                    Log.d("GUI-rename", res)
-                                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
-                                    list = fs.listNode(selectedDir)
-                                }
+                                delete = delete,
+                                rename = rename
                             )
                         }
                         else{
                             File(
                                 item = item as FileSystem.File,
-                                delete ={path: String ->
-                                    val res = fs.deleteNode(path)
-                                    Log.d("GUI-delete", res)
-                                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
-                                    list = fs.listNode(selectedDir)
-                                } ,
-                                rename ={path: String, name: String ->
-                                    val res=fs.rename(path,name)
-                                    Log.d("GUI-rename", res)
-                                    Toast.makeText(context,res,Toast.LENGTH_SHORT).show()
-                                    list = fs.listNode(selectedDir)
-                                }
+                                delete =delete,
+                                rename =rename
                             )
                         }
                     }
@@ -212,9 +230,6 @@ fun HomeScreen(fs: FileSystem,intentUrl:String?){
         }
     }
 }
-
-
-
 @Composable
 fun ExitAlert() {
     val showAlert = remember { mutableStateOf(false) }
@@ -268,6 +283,57 @@ fun exitApp() {
     // Exit the app after a small delay to give time for the dialog to dismiss
     val handler = Handler(Looper.getMainLooper())
     handler.postDelayed({ exitProcess(0) }, 200)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun Search(subNodes:List<FileSystem.Node>,rename: (path: String, name: String) -> Unit,delete: (path: String) -> Unit) {
+    var text by rememberSaveable { mutableStateOf("") }
+    var active by rememberSaveable { mutableStateOf(false) }
+    var list by remember {
+        mutableStateOf(subNodes)
+    }
+    Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier
+                .semantics { isContainer = true }
+                .zIndex(1f)
+                .fillMaxWidth()) {
+            SearchBar(
+                modifier = Modifier.align(Alignment.TopCenter),
+                query = text,
+                onQueryChange = {
+                    text = it
+                    list = subNodes.filter {item->
+                        item.fsName.lowercase().contains(it.lowercase())
+                    }
+                                },
+                onSearch = { active = false },
+                active = active,
+                onActiveChange = {
+                    active = it
+                },
+                placeholder = { Text("Search text") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(list) { item ->
+                        if (item.fsType == 1){
+                            File(
+                                item = item as FileSystem.File,
+                                delete =delete ,
+                                rename =rename
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -379,8 +445,6 @@ fun File(item:FileSystem.File,delete:(path:String)->Unit,rename:(path:String,nam
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, item.data)
                 }
-
-                Row {
                     val context =LocalContext.current
                     IconButton(
                         onClick = {
@@ -391,7 +455,7 @@ fun File(item:FileSystem.File,delete:(path:String)->Unit,rename:(path:String,nam
                     ) {
                         Icon(Icons.Default.Share,"share")
                     }
-                }
+
                 Spacer(modifier = Modifier.weight(1f))
                 var mDisplayMenu by remember { mutableStateOf(false) }
                 IconButton(
@@ -441,7 +505,7 @@ fun File(item:FileSystem.File,delete:(path:String)->Unit,rename:(path:String,nam
             var metaData:OpenGraphMetaData? by remember {
                 mutableStateOf(OpenGraphMetaData(title = item.fsName, url = item.data!!))
             }
-            LaunchedEffect(Unit){
+            LaunchedEffect(item){
                 metaData = getMetaData(item.data!!,item.fsName)
             }
             if (metaData?.imageUrl?.isNotEmpty()==true) {

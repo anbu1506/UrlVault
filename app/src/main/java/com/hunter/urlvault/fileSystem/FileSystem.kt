@@ -194,12 +194,6 @@ class FileSystem(private val db: SQLiteDatabase?) {
     fun createDir(path:String,name:String):String{
         return createNode(path,name,0)
     }
-    fun listDir(path:String): Map<Int, String>? {
-        val fsId = pathToFsId(path)
-        return if(getField(fsId,FsBlock.fsType) as Int ==0)
-            getChildList(fsId)
-        else null
-    }
     fun listNode(path: String):List<Node>{
         val fsId = pathToFsId(path)
         val child = getChildList(fsId)
@@ -222,6 +216,14 @@ class FileSystem(private val db: SQLiteDatabase?) {
             }
         }
         return result
+    }
+    fun listSubNodes(path: String):List<Node> {
+        val sub = getSubDir(pathToFsId(path))
+        val list = mutableListOf<Node>()
+        for (i in sub){
+            list.add(node(i.toInt()))
+        }
+        return list
     }
     fun deleteNode(path: String):String{
         val fsId = pathToFsId(path)

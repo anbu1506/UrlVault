@@ -19,16 +19,18 @@ import com.hunter.urlvault.ui.theme.UrlVaultTheme
 
 
 class MainActivity : ComponentActivity() {
+    private var sharedUrl: String? = null
+    private var fs:FileSystem? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val db = Database(this).writableDatabase
-        val fs = FileSystem(db)
+        fs = FileSystem(db)
         val window = this.window
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         window.clearFlags(WindowManager.LayoutParams.FIRST_SYSTEM_WINDOW)
         window.statusBarColor = this.resources.getColor(R.color.black)
 
-        var sharedUrl: String? = null
+
         if (Intent.ACTION_SEND == intent.action) {
             val uri =  intent.getStringExtra(Intent.EXTRA_TEXT)
             if (uri != null) {
@@ -43,7 +45,24 @@ class MainActivity : ComponentActivity() {
                         .height(50.dp),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    HomeScreen(fs,sharedUrl)
+                    HomeScreen(fs!!,sharedUrl)
+                    ExitAlert()
+                }
+            }
+        }
+    }
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        val url = intent?.getStringExtra(Intent.EXTRA_TEXT) // Get the new intent data here
+        setContent {
+            UrlVaultTheme {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .height(50.dp),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    HomeScreen(fs!!,url)
                     ExitAlert()
                 }
             }
