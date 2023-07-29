@@ -16,6 +16,7 @@
             android:name=".SearchActivity"
             android:exported="false"
             android:label="@string/title_activity_search"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.UrlVault" />
         <activity
             android:name=".MainActivity"

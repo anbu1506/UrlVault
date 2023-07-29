@@ -318,7 +318,6 @@ fun Search(subNodes:List<FileSystem.Node>,rename: (path: String, name: String) -
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(list) { item ->
