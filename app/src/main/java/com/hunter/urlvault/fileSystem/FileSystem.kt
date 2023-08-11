@@ -145,6 +145,18 @@ class FileSystem(private val db: SQLiteDatabase?) {
         return path
     }
     private fun createNode(path:String, name:String, type:Int):String{
+
+        /*
+               if name contains special characters path becomes invalid !
+         */
+        val specialCharacters = "!@#$%^&*()_-+=<>?/\\|{}[]~"
+
+        for (char in name) {
+            if (char in specialCharacters) {
+                return "name shouldn't contains special characters !"
+            }
+        }
+
         Log.d("createNode","path = $path")
         val parentFsId = pathToFsId(path)
         /*
