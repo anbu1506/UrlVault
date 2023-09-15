@@ -11,16 +11,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.hunter.filesystem.Database
+import com.hunter.filesystem.FileSystem
 import com.hunter.urlvault.components.ExitAlert
 import com.hunter.urlvault.components.HomeScreen
-import com.hunter.urlvault.fileSystem.Database
-import com.hunter.urlvault.fileSystem.FileSystem
 import com.hunter.urlvault.ui.theme.UrlVaultTheme
 
 
 class MainActivity : ComponentActivity() {
     private var sharedUrl: String? = null
-    private var fs:FileSystem? = null
+    private var fs: FileSystem? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val db = Database(this).writableDatabase

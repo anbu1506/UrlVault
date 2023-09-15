@@ -13,9 +13,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.hunter.filesystem.Database
+import com.hunter.filesystem.FileSystem
 import com.hunter.urlvault.components.Search
-import com.hunter.urlvault.fileSystem.Database
-import com.hunter.urlvault.fileSystem.FileSystem
 import com.hunter.urlvault.ui.theme.UrlVaultTheme
 
 class SearchActivity : ComponentActivity() {
